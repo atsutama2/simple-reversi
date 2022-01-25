@@ -80,4 +80,9 @@ impl BoardState {
             Turn::White => WHITE,
         }
     }
+
+    // 白の番かどうか
+    pub fn is_it_white_turn(&self) -> bool {
+        self.turn == Turn::White
+    }
 }
