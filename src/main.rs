@@ -4,7 +4,7 @@ use boardstate::BoardState;
 fn main() {
     println!("オセロしますよ！");
 
-    let size: usize = 8;
+    let size: usize = 4;
     // loop {
     //     println!("盤面サイズを4以上の偶数で入力して下さい。Returnキーで確定します。");
 
@@ -25,30 +25,60 @@ fn main() {
     let mut i_am_white: bool = false;
 
     // 黒、白の順番決める
-    loop {
-        println!("先行 {0} は1を入力。後攻 {1} は2を入力して下さい。", BoardState::black_piece(), BoardState::white_piece());
+    // loop {
+    //     println!("先行 {0} は1を入力。後攻 {1} は2を入力して下さい。", BoardState::black_piece(), BoardState::white_piece());
 
-        let mut input_string = String::new();
-        std::io::stdin().read_line(&mut input_string).ok();
-        if let Ok(n) = input_string.trim().parse::<usize>() {
-            match n {
-                1 => {
-                    break;
-                }
-                2 => {
-                    i_am_white = true;
-                    break;
-                }
-                _ => {
-                    err_not_range();
-                }
-            }
-        }
-    }
+    //     let mut input_string = String::new();
+    //     std::io::stdin().read_line(&mut input_string).ok();
+    //     if let Ok(n) = input_string.trim().parse::<usize>() {
+    //         match n {
+    //             1 => {
+    //                 break;
+    //             }
+    //             2 => {
+    //                 i_am_white = true;
+    //                 break;
+    //             }
+    //             _ => {
+    //                 err_not_range();
+    //             }
+    //         }
+    //     }
+    // }
 
     // 盤面の作成
     let mut bs = BoardState::new(size / 2, false);
 
+    // 盤面を表示
+    preview_board(&bs);
+
+    // どちらのターン
+    preview_turn(&bs);
+}
+
+// 盤面を表示
+fn preview_board(bs: &BoardState) {
+    let v = bs.show_board();
+    let n = bs.get_size();
+
+    print!("  ");
+    for i in 1..=n {
+        print!("{:2}", i)
+    }
+    println!("");
+
+    for i in 0..n {
+        print!("{:2}", i + 1);
+        for j in 0..n {
+            print!(" {}", v[i][j]);
+        }
+        println!("");
+    }
+}
+
+// どちらかのターンを表示
+fn preview_turn(bs: &BoardState) {
+    println!("{} のターン", bs.which_turn())
 }
 
 /// 整数の入力が不正である旨のメッセージ

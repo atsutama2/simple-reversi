@@ -25,15 +25,42 @@ pub struct BoardState {
 
 impl BoardState {
     // 新しい盤面を作成する
-    pub fn new(n: usize, white_turn: bool) {
+    pub fn new(n: usize, white_turn: bool) -> BoardState {
         assert!(n != 0);
         let mut s: Vec<Vec<Option<Turn>>> = vec![vec![None; 2 * n]; 2 * n];
-        println!(s);
-        // BoardState {
-        //     size: 1,
-        //     state: nil,
-        //     turn: Turn.White,
-        // }
+        s[n - 1][n - 1] = Some(Turn::White);
+        s[n - 1][n] = Some(Turn::Black);
+        s[n][n - 1] = Some(Turn::Black);
+        s[n][n] = Some(Turn::White);
+
+        BoardState {
+            size: 2 * n,
+            state: s,
+            turn: if white_turn { Turn::White } else { Turn::Black },
+        }
+    }
+
+    // 盤面の大きさを取得
+    pub fn get_size(&self) -> usize {
+        self.size
+    }
+
+    // 盤面の状態をchar型の二次元配列で出力する
+    pub fn show_board(&self) -> Vec<Vec<char>> {
+        let n = self.size;
+        let mut v: Vec<Vec<char>> = vec![vec![NO_PIECE; n]; n];
+
+        for i in 0..n {
+            for j in 0..n {
+                if let Some(t) = &self.state[i][j] {
+                    v[i][j] = match t {
+                        Turn::Black => BLACK,
+                        Turn::White => WHITE,
+                    }
+                }
+            }
+        }
+        v
     }
 
     // 白い駒
@@ -44,5 +71,13 @@ impl BoardState {
     // 黒い駒
     pub fn black_piece() -> char {
         BLACK
+    }
+
+    // どっちのターンの駒の文字を出力
+    pub fn which_turn(&self) -> char {
+        match self.turn {
+            Turn::Black => BLACK,
+            Turn::White => WHITE,
+        }
     }
 }
