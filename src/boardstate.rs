@@ -63,6 +63,179 @@ impl BoardState {
         v
     }
 
+    // 置いたときに裏返せる駒の個数
+    pub fn cnt_reversable(&self) -> Vec<Vec<usize>> {
+        let n = self.size;
+        let mut vec: Vec<Vec<usize>> = vec![vec![0; n]; n];
+        let s = &self.state;
+
+        for i in 0..n {
+            for j in 0..n {
+                // 既に置いてある
+                if let Some(_) = s[i][j] {
+                    continue;
+                }
+
+                // 現在位置からの全方位8方向
+                for k in 0..8 {
+                    // まず1マス隣
+                    let new_x: i32 = i as i32 + dx(k);
+                    let new_y: i32 = j as i32 + dy(k);
+
+                    // 盤面から出ていた場合
+                    if !BoardState::in_range(new_x, n) || !BoardState::in_range(new_y, n) {
+                        continue;
+                    }
+                    let new_x: usize = new_x as usize;
+                    let new_y: usize = new_y as usize;
+
+                    // 隣のマスが空なら処理はなし
+                    if let Some(t) = s[new_x][new_y] {
+                        // 隣のマスが自分と同じ色なら処理はなし
+                        if t == self.turn {
+                            continue;
+                        }
+                        // 隣のマスが自分と違う色の時だけ処理する
+                        for l in 1..n {
+                            let new_x: i32 = new_x as i32 + l as i32 * dx(k);
+                            let new_y: i32 = new_y as i32 + l as i32 * dy(k);
+                            // 盤面から出たら終了
+                            if !BoardState::in_range(new_x, n) || !BoardState::in_range(new_y, n) {
+                                break;
+                            }
+                            let new_x: usize = new_x as usize;
+                            let new_y: usize = new_y as usize;
+
+                            // 空のマスに着いたら終了
+                            if let None = s[new_x][new_y] {
+                                break;
+                            }
+
+                            // 自分と同じ色が再び現れたらこの時だけ裏返せるので裏返せる枚数をカウントアップ
+                            if let Some(t) = s[new_x][new_y] {
+                                if t == self.turn {
+                                    vec[i][j] += l;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //println!("1 {:?}", vec);
+        vec
+    }
+
+    // マス目に駒を置く
+    // 戻り値はゲーム継続ならtrue, 両者とも置けるマスがなければfalse
+    pub fn put(&mut self, i: usize, j: usize) -> bool {
+        let n = self.size;
+
+        assert!(i < n && j < n);
+        let vec = &self.cnt_reversable();
+        assert!(vec[i][j] > 0);
+
+        let s = &mut self.state;
+        s[i][j] = Some(self.turn);
+
+        for k in 0..8 {
+            // 進む方向ごとに判定
+
+            // まず1マス隣
+            let new_x: i32 = i as i32 + dx(k);
+            let new_y: i32 = j as i32 + dy(k);
+
+            // 盤面から出ていた場合
+            if !BoardState::in_range(new_x, n) || !BoardState::in_range(new_y, n) {
+                continue;
+            }
+            let new_x: usize = new_x as usize;
+            let new_y: usize = new_y as usize;
+
+            // 隣のマスが空なら処理なし
+            if let Some(t) = s[new_x][new_y] {
+                // 隣のマスが自分と同じ色なら処理なし
+                if t == self.turn {
+                    continue;
+                }
+
+                // 隣のマスが自分と違う色の時だけ進んでいく
+                for l in 1..n {
+                    let new_x: i32 = new_x as i32 + l as i32 * dx(k);
+                    let new_y: i32 = new_y as i32 + l as i32 * dy(k);
+
+                    // 盤面から出たら終了
+                    if !BoardState::in_range(new_x, n) || !BoardState::in_range(new_y, n) {
+                        break;
+                    }
+                    let new_x: usize = new_x as usize;
+                    let new_y: usize = new_y as usize;
+
+                    // 空のマスに着いたら終了
+                    if let None = s[new_x][new_y] {
+                        break;
+                    }
+
+                    // 自分と同じ色が再び現れたら裏返す
+                    if let Some(t) = s[new_x][new_y] {
+                        if t == self.turn {
+                            // 間の駒を裏返していく処理
+                            for m in 1..=l {
+                                s[(i as i32 + m as i32 * dx(k)) as usize]
+                                    [(j as i32 + m as i32 * dy(k)) as usize] = Some(self.turn);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ターンを交代
+        self.turn = if self.turn == Turn::White {
+            Turn::Black
+        } else {
+            Turn::White
+        };
+
+        // 置けるならtrueを返して終了
+        if BoardState::puttable(&self) {
+            return true
+        }
+
+        // 置けない場合ターン交代
+        self.turn = if self.turn == Turn::White {
+            Turn::Black
+        } else {
+            Turn::White
+        };
+
+        // 今度は置けるならtrue返す
+        if BoardState::puttable(&self) {
+            true
+        } else {
+            false
+        }
+    }
+
+    // 置けるかどうかの判定
+    fn puttable(&self) -> bool {
+        let n = self.size;
+        let vec = self.cnt_reversable();
+        let mut flag: bool = false;
+
+        for i in 0..n {
+            for j in 0..n {
+                if vec[i][j] > 0 {
+                    flag = true;
+                }
+            }
+        }
+        flag
+    }
+
     // 白い駒
     pub fn white_piece() -> char {
         WHITE
@@ -84,5 +257,30 @@ impl BoardState {
     // 白の番かどうか
     pub fn is_it_white_turn(&self) -> bool {
         self.turn == Turn::White
+    }
+
+    // マスの範囲内(0..n)かどうかの判定
+    fn in_range(z: i32, n: usize) -> bool {
+        z >= 0 && z < n as i32
+    }
+}
+
+// x方向への微小変化を見る用の配列の代わり
+const fn dx(n: usize) -> i32 {
+    match n {
+        0 | 1 | 2 => 1,
+        3 | 7 => 0,
+        4 | 5 | 6 => -1,
+        _ => 0,
+    }
+}
+
+// y方向への微小変化を見る用の配列代わり
+const fn dy(n: usize) -> i32 {
+    match n {
+        2 | 3 | 4 => 1,
+        1 | 5 => 0,
+        0 | 6 | 7 => -1,
+        _ => 0,
     }
 }
