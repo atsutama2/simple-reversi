@@ -12,7 +12,7 @@ fn main() {
     // スタート ==============================
     println!("オセロしますよ！");
 
-    let size: usize = 4;
+    let size: usize = 16;
     let mut cpu_flag = true;
     let mut i_am_white: bool = false;
 
@@ -65,26 +65,30 @@ fn main() {
 
             // 置けるマス目を重み付けしつつVecで管理
             let mut options: Vec<(usize, usize)> = Vec::new();
-            let mut option_corners: Vec<(usize, usize)> = Vec::new();
+            let mut options_corners: Vec<(usize, usize)> = Vec::new();
             let vec = &bs.cnt_reversable();
             let n = bs.get_size();
             for i in 0..n {
                 for j in 0..n {
                     if vec[i][j] > 0 {
-                        options.push((i, j));
-                    }
-                    if (i == 0 || i == n - 1) && (j == 0 || j == n - 1) {
-                        option_corners.push((i, j));
+                        for _ in 0..vec[i][j] {
+                            options.push((i, j));
+                        }
+                        if (i == 0 || i == n - 1) && (j == 0 || j == n - 1) {
+                            options_corners.push((i, j));
+                        }
                     }
                 }
             }
 
             // ランダムに選ぶ
-            let &(i, j) = if option_corners.is_empty() {
+            let &(i, j) = if options_corners.is_empty() {
                 options
             } else {
-                option_corners
-            }.choose(&mut rng).unwrap();
+                options_corners
+            }
+            .choose(&mut rng)
+            .unwrap();
 
             // マス目更新
             let can_continue = bs.put(i, j);
@@ -115,6 +119,7 @@ fn main() {
             }
         }
 
+        // 終了処理
         if row_num == 0 {
             println!("終了しますか？「はい」ならyes、「いいえ」ならそれ以外を入力して下さい。");
             let mut y_or_no = String::new();
@@ -126,7 +131,44 @@ fn main() {
             }
         }
 
+        // 列番の受け取り
+        let column_num: usize;
+        loop {
+            let mut column_num_string = String::new();
+            std::io::stdin().read_line(&mut column_num_string).ok();
+            if let Ok(n) = column_num_string.trim().parse::<usize>() {
+                if n > 0 && n <= size {
+                    column_num = n;
+                    break;
+                } else {
+                    err_not_range();
+                }
+            } else {
+                error_not_int();
+            }
+        }
+
+        // 置けるマス目かどうか判定
+        let v = bs.cnt_reversable();
+        if v[row_num - 1][column_num - 1] == 0 {
+            println!("そこには置けません。");
+            continue;
+        }
+
+        // マス目更新
+        let can_continue = bs.put(row_num - 1, column_num - 1);
+
+        // 続行できないときはループを抜けてゲームを終了
+        if !can_continue {
+            break;
+        }
     }
+
+    // 盤面表示
+    preview_board(&bs);
+
+    // 結果表示
+    show_result(&bs);
 }
 
 // 盤面を表示
@@ -134,12 +176,13 @@ fn preview_board(bs: &BoardState) {
     let v = bs.show_board();
     let n = bs.get_size();
 
+    //println!("{:?}", v);
+
     print!("  ");
     for i in 1..=n {
-        print!("{:2}", i)
+        print!("{:2}", i);
     }
     println!("");
-
     for i in 0..n {
         print!("{:2}", i + 1);
         for j in 0..n {
@@ -162,4 +205,16 @@ fn err_not_range() {
 // 整数の入力値が不正であるメッセージ
 fn error_not_int() {
     println!("半角数字で整数を入力して下さい。");
+}
+
+// 結果を表示する
+fn show_result(bs: &BoardState) {
+    let ((c1, s1), (c2, s2)) = bs.count_pieces();
+    if s1 > s2 {
+        println!("{0}が{1}個，{2}が{3}個で{0}の勝ち！", c1, s1, c2, s2);
+    } else if s1 < s2 {
+        println!("{0}が{1}個，{2}が{3}個で{2}の勝ち！", c1, s1, c2, s2);
+    } else {
+        println!("{0}が{1}個，{2}が{3}個で引き分け！", c1, s1, c2, s2);
+    }
 }

@@ -68,16 +68,15 @@ impl BoardState {
         let n = self.size;
         let mut vec: Vec<Vec<usize>> = vec![vec![0; n]; n];
         let s = &self.state;
-
         for i in 0..n {
             for j in 0..n {
-                // 既に置いてある
                 if let Some(_) = s[i][j] {
+                    // もう置いてあるマスはスルー
                     continue;
                 }
-
-                // 現在位置からの全方位8方向
                 for k in 0..8 {
+                    // 進む方向ごとに判定
+
                     // まず1マス隣
                     let new_x: i32 = i as i32 + dx(k);
                     let new_y: i32 = j as i32 + dy(k);
@@ -89,16 +88,17 @@ impl BoardState {
                     let new_x: usize = new_x as usize;
                     let new_y: usize = new_y as usize;
 
-                    // 隣のマスが空なら処理はなし
+                    // 隣のマスが空ならもう処理はいらない
                     if let Some(t) = s[new_x][new_y] {
-                        // 隣のマスが自分と同じ色なら処理はなし
+                        // 隣のマスが自分と同じ色ならもう処理はいらない
                         if t == self.turn {
                             continue;
                         }
-                        // 隣のマスが自分と違う色の時だけ処理する
+                        // 隣のマスが自分と違う色のときだけ進んで行く
                         for l in 1..n {
                             let new_x: i32 = new_x as i32 + l as i32 * dx(k);
                             let new_y: i32 = new_y as i32 + l as i32 * dy(k);
+
                             // 盤面から出たら終了
                             if !BoardState::in_range(new_x, n) || !BoardState::in_range(new_y, n) {
                                 break;
@@ -111,7 +111,8 @@ impl BoardState {
                                 break;
                             }
 
-                            // 自分と同じ色が再び現れたらこの時だけ裏返せるので裏返せる枚数をカウントアップ
+                            // 自分と同じ色が再び現れたらこのときだけ裏返せるので
+                            // 裏返せる枚数をカウントアップ
                             if let Some(t) = s[new_x][new_y] {
                                 if t == self.turn {
                                     vec[i][j] += l;
@@ -123,8 +124,6 @@ impl BoardState {
                 }
             }
         }
-
-        //println!("1 {:?}", vec);
         vec
     }
 
@@ -132,14 +131,11 @@ impl BoardState {
     // 戻り値はゲーム継続ならtrue, 両者とも置けるマスがなければfalse
     pub fn put(&mut self, i: usize, j: usize) -> bool {
         let n = self.size;
-
         assert!(i < n && j < n);
         let vec = &self.cnt_reversable();
         assert!(vec[i][j] > 0);
-
         let s = &mut self.state;
         s[i][j] = Some(self.turn);
-
         for k in 0..8 {
             // 進む方向ごとに判定
 
@@ -154,14 +150,13 @@ impl BoardState {
             let new_x: usize = new_x as usize;
             let new_y: usize = new_y as usize;
 
-            // 隣のマスが空なら処理なし
+            // 隣のマスが空ならもう処理はいらない
             if let Some(t) = s[new_x][new_y] {
-                // 隣のマスが自分と同じ色なら処理なし
+                // 隣のマスが自分と同じ色ならもう処理はいらない
                 if t == self.turn {
                     continue;
                 }
-
-                // 隣のマスが自分と違う色の時だけ進んでいく
+                // 隣のマスが自分と違う色のときだけ進んで行く
                 for l in 1..n {
                     let new_x: i32 = new_x as i32 + l as i32 * dx(k);
                     let new_y: i32 = new_y as i32 + l as i32 * dy(k);
@@ -178,7 +173,8 @@ impl BoardState {
                         break;
                     }
 
-                    // 自分と同じ色が再び現れたら裏返す
+                    // 自分と同じ色が再び現れたらこのときだけ裏返せるので
+                    // 実際に裏返していく
                     if let Some(t) = s[new_x][new_y] {
                         if t == self.turn {
                             // 間の駒を裏返していく処理
@@ -202,20 +198,21 @@ impl BoardState {
 
         // 置けるならtrueを返して終了
         if BoardState::puttable(&self) {
-            return true
+            return true;
         }
 
-        // 置けない場合ターン交代
+        // 置けないならもう一度ターンを交代
         self.turn = if self.turn == Turn::White {
             Turn::Black
         } else {
             Turn::White
         };
 
-        // 今度は置けるならtrue返す
+        // 今度は置けるならtrueを返す
         if BoardState::puttable(&self) {
             true
         } else {
+            // 置けないならfalseを返す
             false
         }
     }
@@ -225,7 +222,6 @@ impl BoardState {
         let n = self.size;
         let vec = self.cnt_reversable();
         let mut flag: bool = false;
-
         for i in 0..n {
             for j in 0..n {
                 if vec[i][j] > 0 {
@@ -262,6 +258,24 @@ impl BoardState {
     // マスの範囲内(0..n)かどうかの判定
     fn in_range(z: i32, n: usize) -> bool {
         z >= 0 && z < n as i32
+    }
+
+    /// 駒の個数を出力
+    pub fn count_pieces(&self) -> ((char, usize), (char, usize)) {
+        let mut white_count: usize = 0;
+        let mut black_count: usize = 0;
+        let n = self.size;
+        for i in 0..n {
+            for j in 0..n {
+                if let Some(t) = &self.state[i][j] {
+                    match t {
+                        Turn::White => white_count += 1,
+                        Turn::Black => black_count += 1,
+                    }
+                }
+            }
+        }
+        ((WHITE, white_count), (BLACK, black_count))
     }
 }
 
